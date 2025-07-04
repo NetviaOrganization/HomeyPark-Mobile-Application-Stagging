@@ -1,0 +1,20 @@
+<!-- assets/recaptcha.html -->
+<!DOCTYPE html><html><head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<style>html, body { margin: 0; padding: 0; height: 100%; display: flex; justify-content: center; align-items: center; }</style>
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
+<script type="text/javascript">
+  // These functions are called by the reCAPTCHA widget and post messages back to the Flutter app.
+  function onVerified(token) { RecaptchaV2.postMessage(token); }
+  function onExpired() { RecaptchaV2.postMessage("err_expired"); }
+  function onError() { RecaptchaV2.postMessage("err_generic"); }
+</script>
+</head><body>
+<!-- This is the container where Google's reCAPTCHA widget will be rendered. -->
+<div class="g-recaptcha" 
+     data-sitekey="$siteKey" 
+     data-callback="onVerified" 
+     data-expired-callback="onExpired" 
+     data-error-callback="onError">
+</div>
+</body></html>
