@@ -7,8 +7,6 @@ import 'package:homeypark_mobile_application/services/iam_service.dart';
 import 'package:homeypark_mobile_application/model/user_model.dart';
 import 'package:homeypark_mobile_application/screens/sign_up_screen.dart';
 import 'package:homeypark_mobile_application/widgets/auth_widget.dart';
-import 'package:homeypark_mobile_application/config/pref/preferences.dart';
-
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -67,13 +65,15 @@ class _SignInScreenState extends State<SignInScreen> {
               ),
               Expanded(
                 child: RecaptchaV2(
-                   apiKey: recaptchaSiteKey,
+                  apiKey: recaptchaSiteKey,
                   // --- LÓGICA SIMPLIFICADA ---
                   // Ahora, simplemente obtenemos el token y se lo pasamos
                   // a nuestro servicio para que él se encargue de todo.
                   onVerifiedSuccessfully: (String token) {
                     Navigator.pop(modalContext); // Cierra el modal
-                    _signInWithToken(token); // Llama a la lógica de inicio de sesión
+                    _signInWithToken(
+                      token,
+                    ); // Llama a la lógica de inicio de sesión
                   },
                 ),
               ),
@@ -86,31 +86,30 @@ class _SignInScreenState extends State<SignInScreen> {
 
   void _navigateToSignUp() {
     Provider.of<IAMService>(context, listen: false).clearErrorMessage();
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => const SignUpScreen()),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (context) => const SignUpScreen()));
   }
 
   Future<void> _signInWithToken(String token) async {
     final signInData = SignInData(
       email: _emailController.text.trim(),
       password: _passwordController.text,
-      recaptchaToken: token, // Pasamos el token, aunque el servicio ya no lo use para verificar.
+      recaptchaToken:
+          token, // Pasamos el token, aunque el servicio ya no lo use para verificar.
     );
     final iamService = Provider.of<IAMService>(context, listen: false);
     await iamService.signIn(signInData);
-    if (iamService.currentUser != null) {
-      final userId = int.parse(iamService.currentUser!.id);
-      await preferences.saveUserId(userId);
-    }
+    // El IAMService automáticamente guarda userId y profileId en preferences
+    // a través del método _setCurrentUser -> _updatePreferencesWithUser
   }
 
   void _onRecaptchaError(String? error) {
     debugPrint('reCAPTCHA Error: $error');
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(error ?? 'Error de verificación.')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(error ?? 'Error de verificación.')));
   }
 
   @override
@@ -144,9 +143,21 @@ class _SignInScreenState extends State<SignInScreen> {
       children: [
         Image.asset('assets/images/logo.png', height: 100),
         const SizedBox(height: 24),
-        const Text('Bienvenido de vuelta', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: AppColors.darkText), textAlign: TextAlign.center),
+        const Text(
+          'Bienvenido de vuelta',
+          style: TextStyle(
+            fontSize: 26,
+            fontWeight: FontWeight.bold,
+            color: AppColors.darkText,
+          ),
+          textAlign: TextAlign.center,
+        ),
         const SizedBox(height: 8),
-        const Text('Inicia sesión para continuar en HomeyPark', style: TextStyle(fontSize: 16, color: AppColors.subtleText), textAlign: TextAlign.center),
+        const Text(
+          'Inicia sesión para continuar en HomeyPark',
+          style: TextStyle(fontSize: 16, color: AppColors.subtleText),
+          textAlign: TextAlign.center,
+        ),
       ],
     );
   }
@@ -156,18 +167,52 @@ class _SignInScreenState extends State<SignInScreen> {
       key: _formKey,
       child: Column(
         children: [
-          CustomTextFormField(controller: _emailController, labelText: 'Email', iconData: Icons.email_outlined, keyboardType: TextInputType.emailAddress, validator: (value) { if (value == null || !RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) { return 'Por favor ingresa un email válido'; } return null; }),
+          CustomTextFormField(
+            controller: _emailController,
+            labelText: 'Email',
+            iconData: Icons.email_outlined,
+            keyboardType: TextInputType.emailAddress,
+            validator: (value) {
+              if (value == null ||
+                  !RegExp(
+                    r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                  ).hasMatch(value)) {
+                return 'Por favor ingresa un email válido';
+              }
+              return null;
+            },
+          ),
           const SizedBox(height: 16),
-          CustomTextFormField(controller: _passwordController, labelText: 'Contraseña', iconData: Icons.lock_outline, isPassword: true, obscureText: _obscurePassword, toggleObscureText: () => setState(() => _obscurePassword = !_obscurePassword), validator: (value) { if (value == null || value.isEmpty) { return 'Por favor ingresa tu contraseña'; } return null; }),
+          CustomTextFormField(
+            controller: _passwordController,
+            labelText: 'Contraseña',
+            iconData: Icons.lock_outline,
+            isPassword: true,
+            obscureText: _obscurePassword,
+            toggleObscureText:
+                () => setState(() => _obscurePassword = !_obscurePassword),
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Por favor ingresa tu contraseña';
+              }
+              return null;
+            },
+          ),
           const SizedBox(height: 24),
-          Consumer<IAMService>(builder: (context, iamService, child) {
-            return Column(
-              children: [
-                PrimaryButton(text: 'Iniciar Sesión', isLoading: iamService.isLoading, onPressed: _handleSignIn),
-                ErrorMessageWidget(errorMessage: iamService.errorMessage),
-              ],
-            );
-          }),
+          Consumer<IAMService>(
+            builder: (context, iamService, child) {
+              return Column(
+                children: [
+                  PrimaryButton(
+                    text: 'Iniciar Sesión',
+                    isLoading: iamService.isLoading,
+                    onPressed: _handleSignIn,
+                  ),
+                  ErrorMessageWidget(errorMessage: iamService.errorMessage),
+                ],
+              );
+            },
+          ),
         ],
       ),
     );

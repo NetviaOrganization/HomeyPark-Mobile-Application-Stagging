@@ -28,9 +28,12 @@ class _MyGaragesScreenState extends State<MyGaragesScreen> {
     });
 
     try {
-      final userId = await preferences.getUserId();
-      final parkings = await ParkingService.getParkingListByUserId(userId);
+      final profileId = await preferences.getProfileId();
       
+      print("🏠 MyGaragesScreen: Obteniendo parkings para profileId = $profileId");
+      
+      final parkings = await ParkingService.getParkingListByUserId(profileId);
+
       setState(() {
         _parkings = parkings;
         _loading = false;
@@ -39,7 +42,7 @@ class _MyGaragesScreenState extends State<MyGaragesScreen> {
       setState(() {
         _loading = false;
       });
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error al cargar estacionamientos: $e')),
       );
@@ -49,9 +52,7 @@ class _MyGaragesScreenState extends State<MyGaragesScreen> {
   Future<void> _navigateToAddParking() async {
     final result = await Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => const ParkingFormScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const ParkingFormScreen()),
     );
 
     if (result == true) {
@@ -75,34 +76,39 @@ class _MyGaragesScreenState extends State<MyGaragesScreen> {
   Future<void> _deleteParking(int id) async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirmar eliminación'),
-        content: const Text('¿Estás seguro de que quieres eliminar este estacionamiento?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Confirmar eliminación'),
+            content: const Text(
+              '¿Estás seguro de que quieres eliminar este estacionamiento?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Eliminar'),
+              ),
+            ],
           ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Eliminar'),
-          ),
-        ],
-      ),
     );
 
     if (confirm == true) {
       try {
         await ParkingService.deleteParking(id);
         _loadParkings(); // Recargar la lista
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Estacionamiento eliminado exitosamente')),
+          const SnackBar(
+            content: Text('Estacionamiento eliminado exitosamente'),
+          ),
         );
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al eliminar: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error al eliminar: $e')));
       }
     }
   }
@@ -113,10 +119,7 @@ class _MyGaragesScreenState extends State<MyGaragesScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          'Mis Estacionamientos',
-          style: theme.textTheme.titleMedium,
-        ),
+        title: Text('Mis Estacionamientos', style: theme.textTheme.titleMedium),
         backgroundColor: Colors.white,
         actions: [
           IconButton(
@@ -125,66 +128,68 @@ class _MyGaragesScreenState extends State<MyGaragesScreen> {
           ),
         ],
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _parkings.isEmpty
+      body:
+          _loading
+              ? const Center(child: CircularProgressIndicator())
+              : _parkings.isEmpty
               ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.garage_outlined,
-                        size: 64,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.garage_outlined,
+                      size: 64,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No tienes estacionamientos registrados',
+                      style: theme.textTheme.titleMedium?.apply(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'No tienes estacionamientos registrados',
-                        style: theme.textTheme.titleMedium?.apply(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Agrega tu primer estacionamiento para empezar a recibir reservas',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodyMedium?.apply(
+                        color: theme.colorScheme.onSurfaceVariant,
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Agrega tu primer estacionamiento para empezar a recibir reservas',
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.bodyMedium?.apply(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      FilledButton.icon(
-                        onPressed: _navigateToAddParking,
-                        icon: const Icon(Icons.add),
-                        label: const Text('Agregar Estacionamiento'),
-                      ),
-                    ],
-                  ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _parkings.length,
-                  itemBuilder: (context, index) {
-                    final parking = _parkings[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: GarageCard(
-                        id: parking.id,
-                        parking: parking,
-                        onEdit: (id) {
-                          _navigateToEditParking(parking);
-                        },
-                        onDelete: _deleteParking,
-                      ),
-                    );
-                  },
+                    ),
+                    const SizedBox(height: 24),
+                    FilledButton.icon(
+                      onPressed: _navigateToAddParking,
+                      icon: const Icon(Icons.add),
+                      label: const Text('Agregar Estacionamiento'),
+                    ),
+                  ],
                 ),
-      floatingActionButton: _parkings.isNotEmpty
-          ? FloatingActionButton(
-              onPressed: _navigateToAddParking,
-              child: const Icon(Icons.add),
-            )
-          : null,
+              )
+              : ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: _parkings.length,
+                itemBuilder: (context, index) {
+                  final parking = _parkings[index];
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: GarageCard(
+                      id: parking.id,
+                      parking: parking,
+                      onEdit: (id) {
+                        _navigateToEditParking(parking);
+                      },
+                      onDelete: _deleteParking,
+                    ),
+                  );
+                },
+              ),
+      floatingActionButton:
+          _parkings.isNotEmpty
+              ? FloatingActionButton(
+                onPressed: _navigateToAddParking,
+                child: const Icon(Icons.add),
+              )
+              : null,
     );
   }
 }

@@ -9,6 +9,7 @@ import 'package:homeypark_mobile_application/services/review_service.dart';
 import 'package:homeypark_mobile_application/model/profile.dart';
 import 'package:homeypark_mobile_application/screens/reservation_form_screen.dart';
 import 'package:homeypark_mobile_application/config/pref/preferences.dart';
+import 'package:homeypark_mobile_application/widgets/verification_badge.dart';
 
 
 class ParkingDetailScreen extends StatefulWidget {
@@ -160,7 +161,10 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
                                       return Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          Text("${profile.firstName} ${profile.lastName}", style: theme.textTheme.labelLarge),
+                                          VerificationBadgeInline(
+                                            isVerified: profile.verifiedEmail,
+                                            userName: "${profile.firstName} ${profile.lastName}",
+                                          ),
                                           Text("Se unió desde ${_getMonthName(profile.createdAt.month)}, ${profile.createdAt.year}", style: theme.textTheme.bodySmall),
                                         ],
                                       );
@@ -519,8 +523,6 @@ class _ReviewDialogState extends State<_ReviewDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return AlertDialog(
       title: const Text("Calificar parking"),
       content: Column(

@@ -67,11 +67,12 @@ class _ParkingFormScreenState extends State<ParkingFormScreen> {
   Future<void> _selectLocation() async {
     final result = await showDialog<PlaceDetails>(
       context: context,
-      builder: (context) => PlacesAutocompleteDialog(
-        onPlaceSelected: (place) {
-          Navigator.of(context).pop(place);
-        },
-      ),
+      builder:
+          (context) => PlacesAutocompleteDialog(
+            onPlaceSelected: (place) {
+              Navigator.of(context).pop(place);
+            },
+          ),
     );
 
     if (result != null) {
@@ -98,7 +99,9 @@ class _ParkingFormScreenState extends State<ParkingFormScreen> {
     });
 
     try {
-      final profileId = await preferences.getUserId();
+      final profileId = await preferences.getProfileId();
+      
+      print("🅿️ ParkingFormScreen: Usando profileId = $profileId para operación de parking");
 
       if (isEditing) {
         // Editar estacionamiento existente
@@ -143,9 +146,9 @@ class _ParkingFormScreenState extends State<ParkingFormScreen> {
 
       Navigator.pop(context, true); // Retorna true para indicar éxito
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
     } finally {
       setState(() {
         _loading = false;
@@ -326,7 +329,11 @@ class _ParkingFormScreenState extends State<ParkingFormScreen> {
               OutlinedButton.icon(
                 onPressed: _selectLocation,
                 icon: const Icon(Icons.location_on),
-                label: Text(_latitude != null ? 'Ubicación seleccionada' : 'Seleccionar ubicación'),
+                label: Text(
+                  _latitude != null
+                      ? 'Ubicación seleccionada'
+                      : 'Seleccionar ubicación',
+                ),
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size(double.infinity, 48),
                 ),
@@ -433,9 +440,12 @@ class _ParkingFormScreenState extends State<ParkingFormScreen> {
                 height: 48,
                 child: FilledButton(
                   onPressed: _loading ? null : _savePark,
-                  child: _loading
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : Text(isEditing ? 'Actualizar' : 'Crear Estacionamiento'),
+                  child:
+                      _loading
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : Text(
+                            isEditing ? 'Actualizar' : 'Crear Estacionamiento',
+                          ),
                 ),
               ),
             ],

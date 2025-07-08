@@ -8,13 +8,14 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'package:homeypark_mobile_application/model/user_model.dart';
 import 'package:homeypark_mobile_application/services/base_service.dart';
+import 'package:homeypark_mobile_application/config/pref/preferences.dart';
 
 class IAMService extends ChangeNotifier {
   final String _baseUrl = BaseService.baseUrl;
   final _secureStorage = const FlutterSecureStorage();
   static const String _sessionTokenKey = 'session_token';
- static const String _sessionEmailKey = 'session_active_user_email';
-  
+  static const String _sessionEmailKey = 'session_active_user_email';
+
   UserModel? _currentUser;
   bool _isLoading = false;
   String? _errorMessage;
@@ -24,12 +25,10 @@ class IAMService extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-   Future<void> initialize() async {
+  Future<void> initialize() async {
     final token = await _secureStorage.read(key: _sessionTokenKey);
     final email = await _secureStorage.read(key: _sessionEmailKey);
-    if (token != null && email != null) {
-      
-    }
+    if (token != null && email != null) {}
   }
 
   void clearErrorMessage() {
@@ -45,21 +44,22 @@ class IAMService extends ChangeNotifier {
       debugPrint("Advertencia: Se intentó actualizar un usuario no logueado.");
       return;
     }
-    final updatedUser = _currentUser!.copyWith(
-      profile: updatedProfile,
-    );
-     _setCurrentUser(updatedUser);
+    final updatedUser = _currentUser!.copyWith(profile: updatedProfile);
+    _setCurrentUser(updatedUser);
   }
-
-  
 
   Future<bool> _verifyRecaptchaToken(String token) async {
     final secretKey = dotenv.env['RECAPTCHA_SECRET_KEY'];
-    if (secretKey == null || secretKey.isEmpty) throw 'La configuración de reCAPTCHA es incorrecta.';
+    if (secretKey == null || secretKey.isEmpty)
+      throw 'La configuración de reCAPTCHA es incorrecta.';
     try {
       final uri = Uri.parse('https://www.google.com/recaptcha/api/siteverify');
-      final response = await http.post(uri, body: {'secret': secretKey, 'response': token});
-      if (response.statusCode == 200) return json.decode(response.body)['success'] == true;
+      final response = await http.post(
+        uri,
+        body: {'secret': secretKey, 'response': token},
+      );
+      if (response.statusCode == 200)
+        return json.decode(response.body)['success'] == true;
       return false;
     } catch (e) {
       debugPrint('Excepción al verificar reCAPTCHA: $e');
@@ -89,8 +89,10 @@ class IAMService extends ChangeNotifier {
 
     // 2. Si el registro falla, lanzamos el error.
     if (response.statusCode >= 300) {
-      if (response.body.isEmpty) throw 'Error al registrar usuario (respuesta vacía).';
-      throw json.decode(response.body)['message'] ?? 'Error al registrar el usuario.';
+      if (response.body.isEmpty)
+        throw 'Error al registrar usuario (respuesta vacía).';
+      throw json.decode(response.body)['message'] ??
+          'Error al registrar el usuario.';
     }
 
     // 3. Si el registro tiene éxito, iniciamos sesión para obtener el token y el perfil.
@@ -102,35 +104,35 @@ class IAMService extends ChangeNotifier {
     await _handleAuthResponse(signInResponse, email: data.email);
   });
 
-   Future<bool> signIn(SignInData data) => _performAuthOperation(() async {
-  final isHuman = await _verifyRecaptchaToken(data.recaptchaToken);
-  if (!isHuman) throw 'La verificación reCAPTCHA ha fallado.';
+  Future<bool> signIn(SignInData data) => _performAuthOperation(() async {
+    final isHuman = await _verifyRecaptchaToken(data.recaptchaToken);
+    if (!isHuman) throw 'La verificación reCAPTCHA ha fallado.';
 
-  final url = Uri.parse('$_baseUrl/authentication/sign-in');
-  final headers = {'Content-Type': 'application/json'};
-  final bodyData = {'email': data.email, 'password': data.password};
-  final body = json.encode(bodyData);
+    final url = Uri.parse('$_baseUrl/authentication/sign-in');
+    final headers = {'Content-Type': 'application/json'};
+    final bodyData = {'email': data.email, 'password': data.password};
+    final body = json.encode(bodyData);
 
-  if (kDebugMode) {
-    print('--- SIGN IN REQUEST ---');
-    print('URL: $url');
-    print('Headers: $headers');
-    print('Body: $body');
-    print('------------------------');
-  }
+    if (kDebugMode) {
+      print('--- SIGN IN REQUEST ---');
+      print('URL: $url');
+      print('Headers: $headers');
+      print('Body: $body');
+      print('------------------------');
+    }
 
-  final response = await http.post(url, headers: headers, body: body);
+    final response = await http.post(url, headers: headers, body: body);
 
-  if (kDebugMode) {
-    print('--- SIGN IN RESPONSE ---');
-    print('Status: ${response.statusCode}');
-    print('Body: ${response.body}');
-    print('-------------------------');
-  }
+    if (kDebugMode) {
+      print('--- SIGN IN RESPONSE ---');
+      print('Status: ${response.statusCode}');
+      print('Body: ${response.body}');
+      print('-------------------------');
+    }
 
-  await _handleAuthResponse(response, email: data.email);
-});
-   void updateLocalUserData({
+    await _handleAuthResponse(response, email: data.email);
+  });
+  void updateLocalUserData({
     String? firstName,
     String? lastName,
     DateTime? birthDate,
@@ -151,9 +153,7 @@ class IAMService extends ChangeNotifier {
 
     // 3. Creamos una copia del USUARIO actual, reemplazando solo su perfil.
     //    Usamos el `copyWith` de la clase UserModel.
-    final updatedUser = _currentUser!.copyWith(
-      profile: updatedProfile,
-    );
+    final updatedUser = _currentUser!.copyWith(profile: updatedProfile);
 
     // 4. Actualizamos el estado con el nuevo objeto UserModel completo.
     _setCurrentUser(updatedUser);
@@ -163,12 +163,16 @@ class IAMService extends ChangeNotifier {
     _setLoading(true);
     _currentUser = null;
     await _secureStorage.delete(key: _sessionTokenKey);
-    await _secureStorage.delete(key: _sessionEmailKey); 
+    await _secureStorage.delete(key: _sessionEmailKey);
+    await preferences.deleteUserId(); // Limpiar el userId de preferences
     _errorMessage = null;
     _setLoading(false);
   }
 
-Future<void> _handleAuthResponse(http.Response response, {required String email}) async {
+  Future<void> _handleAuthResponse(
+    http.Response response, {
+    required String email,
+  }) async {
     // Para depuración, es útil ver siempre la respuesta
     if (kDebugMode) {
       print("--- Respuesta de Auth [${response.statusCode}] ---");
@@ -190,13 +194,12 @@ Future<void> _handleAuthResponse(http.Response response, {required String email}
         await _secureStorage.write(key: _sessionEmailKey, value: email);
 
         final authData = {
-        'id': responseData['id'],
-        'email': email,
-        'roles': responseData['roles'] ?? ['ROLE_GUEST'],
+          'id': responseData['id'],
+          'email': email,
+          'roles': responseData['roles'] ?? ['ROLE_GUEST'],
         };
 
-      await _fetchUserProfile(token: token, authData: authData);
-
+        await _fetchUserProfile(token: token, authData: authData);
       } else {
         throw 'Respuesta exitosa del servidor, pero con cuerpo vacío.';
       }
@@ -204,7 +207,8 @@ Future<void> _handleAuthResponse(http.Response response, {required String email}
       // Si la respuesta es un error, intentamos decodificar el mensaje del backend.
       if (response.body.isNotEmpty) {
         final errorData = json.decode(response.body);
-        throw errorData['message'] ?? 'Error del servidor (${response.statusCode})';
+        throw errorData['message'] ??
+            'Error del servidor (${response.statusCode})';
       } else {
         throw 'Error del servidor (${response.statusCode}) sin mensaje.';
       }
@@ -212,14 +216,14 @@ Future<void> _handleAuthResponse(http.Response response, {required String email}
   }
 
   Future<void> _fetchUserProfile({
-    required String token, 
+    required String token,
     required Map<String, dynamic> authData, // Ahora recibe los datos de auth
   }) async {
     try {
       // 1. Hacemos la llamada al endpoint GET /profiles general.
       //    El backend sabe a qué usuario nos referimos gracias al token.
       final response = await http.get(
-        Uri.parse('$_baseUrl/profiles'), 
+        Uri.parse('$_baseUrl/profiles'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -234,17 +238,42 @@ Future<void> _handleAuthResponse(http.Response response, {required String email}
         // 2. El backend devuelve una LISTA de perfiles.
         final List<dynamic> profilesList = json.decode(response.body);
 
+        if (kDebugMode) {
+          print("🔍 DEBUG: Profiles encontrados: ${profilesList.length}");
+          for (int i = 0; i < profilesList.length; i++) {
+            print("🔍 Perfil $i: userId=${profilesList[i]['userId']}, profileId=${profilesList[i]['id']}");
+          }
+          print("🔍 AuthData recibido: userId=${authData['id']}");
+        }
+
         if (profilesList.isEmpty) {
           throw 'Error crítico: El token es válido pero no se encontró ningún perfil asociado.';
         }
 
-        // 3. Tomamos el PRIMER (y probablemente único) perfil de la lista.
-        final Map<String, dynamic> profileData = profilesList.first;
+        // 3. Buscamos el perfil que corresponde al usuario autenticado
+        final int authUserId = authData['id'] is String 
+            ? int.parse(authData['id']) 
+            : authData['id'];
         
+        final Map<String, dynamic>? profileData = profilesList
+            .cast<Map<String, dynamic>>()
+            .where((profile) => profile['userId'] == authUserId)
+            .firstOrNull;
+
+        if (profileData == null) {
+          throw 'Error crítico: No se encontró un perfil para el usuario autenticado (userId: $authUserId).';
+        }
+
+        if (kDebugMode) {
+          print("🔍 Perfil seleccionado: userId=${profileData['userId']}, profileId=${profileData['id']}");
+        }
+
         // 4. Creamos el UserModel completo usando nuestro factory modificado.
-        final user = UserModel.fromJson(authData: authData, profileData: profileData);
+        final user = UserModel.fromJson(
+          authData: authData,
+          profileData: profileData,
+        );
         _setCurrentUser(user);
-        
       } else {
         throw 'No se pudo obtener el perfil (código de respuesta: ${response.statusCode}).';
       }
@@ -256,6 +285,7 @@ Future<void> _handleAuthResponse(http.Response response, {required String email}
       rethrow;
     }
   }
+
   Future<bool> _performAuthOperation(Future<void> Function() operation) async {
     _errorMessage = null;
     _setLoading(true);
@@ -272,7 +302,25 @@ Future<void> _handleAuthResponse(http.Response response, {required String email}
 
   void _setCurrentUser(UserModel user) {
     _currentUser = user;
+    // Actualizar preferences con los datos del usuario
+    _updatePreferencesWithUser(user);
     notifyListeners();
+  }
+
+  Future<void> _updatePreferencesWithUser(UserModel user) async {
+    try {
+      final userId = int.parse(user.id);
+      final profileId = user.profileId;
+      
+      print("🔄 IAMService: Actualizando preferences con userId=$userId, profileId=$profileId");
+      
+      await preferences.saveUserId(userId);
+      await preferences.saveProfileId(profileId);
+      
+      print("✅ IAMService: Preferences actualizadas exitosamente");
+    } catch (e) {
+      debugPrint('❌ Error actualizando preferences: $e');
+    }
   }
 
   void _setLoading(bool value) {

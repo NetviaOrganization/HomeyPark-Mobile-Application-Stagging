@@ -3,9 +3,11 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:homeypark_mobile_application/services/iam_service.dart';
 import 'package:homeypark_mobile_application/services/profile_service.dart';
+import 'package:homeypark_mobile_application/services/email_verification_service.dart';
 import 'package:homeypark_mobile_application/widgets/profile_avatar.dart';
 import 'package:homeypark_mobile_application/widgets/profile_info_field.dart';
 import 'package:homeypark_mobile_application/widgets/auth_widget.dart';
+import 'package:homeypark_mobile_application/widgets/email_verification_dialog.dart';
 import 'package:homeypark_mobile_application/model/user_model.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -17,6 +19,7 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _isEditing = false;
+  bool _isEmailVerified = false;
   final _formKey = GlobalKey<FormState>();
 
   late TextEditingController _firstNameController;
@@ -29,6 +32,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ProfileService>().clearErrorMessage();
+      _checkEmailVerificationStatus();
     });
      final currentUser = context.read<IAMService>().currentUser;
     _firstNameController = TextEditingController(text: currentUser?.profile.firstName ?? '');
@@ -112,6 +116,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
             content: Text('Perfil actualizado con éxito.'),
             backgroundColor: AppColors.primaryGreen),
       );
+    }
+  }
+
+  Future<void> _checkEmailVerificationStatus() async {
+    final currentUser = context.read<IAMService>().currentUser;
+    if (currentUser != null) {
+      final isVerified = await currentUser.isEmailVerified;
+      if (mounted) {
+        setState(() {
+          _isEmailVerified = isVerified;
+        });
+      }
+    }
+  }
+
+  Future<void> _showEmailVerificationDialog() async {
+    final currentUser = context.read<IAMService>().currentUser;
+    if (currentUser == null) return;
+
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => ChangeNotifierProvider(
+        create: (context) => EmailVerificationService(),
+        child: EmailVerificationDialog(
+          email: currentUser.email,
+          userName: currentUser.fullName,
+        ),
+      ),
+    );
+
+    if (result == true) {
+      _checkEmailVerificationStatus();
     }
   }
 
@@ -199,10 +236,93 @@ class _ProfileScreenState extends State<ProfileScreen> {
           label: 'Fecha de Nacimiento',
           value: DateFormat('d \'de\' MMMM \'de\' yyyy', 'es_ES').format(user.birthDate),
         ),
-        ProfileInfoField(
-          icon: Icons.email_outlined,
-          label: 'Correo Electrónico',
-          value: user.email,
+        const Divider(height: 32),
+        // Email con botón de verificación
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: _isEmailVerified ? Colors.green[50] : Colors.orange[50],
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: _isEmailVerified ? Colors.green[200]! : Colors.orange[200]!,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.email_outlined,
+                    color: _isEmailVerified ? Colors.green[700] : Colors.orange[700],
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Correo Electrónico',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _isEmailVerified ? Colors.green[100] : Colors.orange[100],
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _isEmailVerified ? Icons.verified : Icons.warning,
+                          size: 16,
+                          color: _isEmailVerified ? Colors.green[700] : Colors.orange[700],
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          _isEmailVerified ? 'Verificado' : 'No verificado',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: _isEmailVerified ? Colors.green[700] : Colors.orange[700],
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                user.email,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              if (!_isEmailVerified) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _showEmailVerificationDialog,
+                    icon: const Icon(Icons.email, size: 18),
+                    label: const Text('Verificar Email'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange[600],
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
       ],
     );
