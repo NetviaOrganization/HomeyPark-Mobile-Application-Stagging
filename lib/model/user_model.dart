@@ -1,4 +1,6 @@
 import 'package:homeypark_mobile_application/model/profile.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 enum UserRole {
   guest('ROLE_GUEST'),
   admin('ROLE_ADMIN'),
@@ -36,6 +38,12 @@ class UserModel {
   String get fullName => '${profile.firstName} ${profile.lastName}';
   int get profileId => profile.id!;
   DateTime get birthDate => profile.birthDate;
+
+  // Método para verificar si el email está verificado
+  Future<bool> get isEmailVerified async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool('email_verified_$email') ?? false;
+  }
 
   // --- Constructor Factory Único y Robusto ---
   // Este es el único constructor que necesitamos para crear un UserModel desde datos JSON.

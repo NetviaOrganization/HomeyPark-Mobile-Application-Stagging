@@ -43,27 +43,39 @@ class _HostReservationsScreenState extends State<HostReservationsScreen> {
 
   void _loadHostReservations() async {
     final reservations = await ReservationService.getReservationsByHostId(
-        await preferences.getUserId());
+      await preferences.getProfileId(),
+    );
 
-    final toAcceptReservations = reservations
-        .where((reservation) => reservation.status == ReservationStatus.pending)
-        .toList();
+    final toAcceptReservations =
+        reservations
+            .where(
+              (reservation) => reservation.status == ReservationStatus.pending,
+            )
+            .toList();
 
-    final inProgressReservations = reservations
-        .where(
-            (reservation) => reservation.status == ReservationStatus.inProgress)
-        .toList();
+    final inProgressReservations =
+        reservations
+            .where(
+              (reservation) =>
+                  reservation.status == ReservationStatus.inProgress,
+            )
+            .toList();
 
-    final incomingReservations = reservations
-        .where(
-            (reservation) => reservation.status == ReservationStatus.approved)
-        .toList();
+    final incomingReservations =
+        reservations
+            .where(
+              (reservation) => reservation.status == ReservationStatus.approved,
+            )
+            .toList();
 
-    final pastReservations = reservations
-        .where((reservation) =>
-    reservation.status == ReservationStatus.completed ||
-        reservation.status == ReservationStatus.cancelled)
-        .toList();
+    final pastReservations =
+        reservations
+            .where(
+              (reservation) =>
+                  reservation.status == ReservationStatus.completed ||
+                  reservation.status == ReservationStatus.cancelled,
+            )
+            .toList();
 
     setState(() {
       _reservationsList = reservations;
@@ -101,205 +113,232 @@ class _HostReservationsScreenState extends State<HostReservationsScreen> {
             ],
           ),
         ),
-        body: TabBarView(children: [
-          _loading
-              ? const Center(child: CircularProgressIndicator())
-              : ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: _toAcceptReservationList.length,
-            itemBuilder: (context, index) {
-              final reservation = _toAcceptReservationList[index];
+        body: TabBarView(
+          children: [
+            _loading
+                ? const Center(child: CircularProgressIndicator())
+                : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _toAcceptReservationList.length,
+                  itemBuilder: (context, index) {
+                    final reservation = _toAcceptReservationList[index];
 
-              if (_toAcceptReservationList.isEmpty) {
-                return const Center(
-                  child: Text("No tienes reservas por aceptar"),
-                );
-              }
+                    if (_toAcceptReservationList.isEmpty) {
+                      return const Center(
+                        child: Text("No tienes reservas por aceptar"),
+                      );
+                    }
 
-              return FutureBuilder(
-                  future: ParkingService.getParkingById(
-                      reservation.parkingId),
-                  builder: (context, snapshot) {
-                    if (snapshot.data == null) {
-                      return const SizedBox();
-                    }
-                    return ReservationCard(
-                      id: reservation.id,
-                      status: reservation.status,
-                      address: snapshot.data!.location.address,
-                      number: snapshot.data!.location.numDirection,
-                      hasAction: true,
-                      actions: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () async {
-                              await ReservationService.cancelReservation(
-                                  reservation.id);
-                              _loadHostReservations();
-                            },
-                            style: OutlinedButton.styleFrom(
-                              side: BorderSide(
-                                  color: theme.colorScheme.error),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8)),
-                            ),
-                            child: Text("Rechazar",
-                                style: TextStyle(
-                                    color: theme.colorScheme.error)),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: FilledButton(
-                            onPressed: () async {
-                              await ReservationService.approveReservation(
-                                  reservation.id);
-                              _loadHostReservations();
-                            },
-                            style: FilledButton.styleFrom(
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8)),
-                            ),
-                            child: const Text("Aceptar"),
-                          ),
-                        ),
-                      ],
-                      date: reservation.startTime.toDateTime(),
-                      startTime: TimeOfDay.fromDateTime(
-                          reservation.startTime.toDateTime()),
-                      endTime: TimeOfDay.fromDateTime(
-                          reservation.endTime.toDateTime()),
-                      onTapReservation: onTapReservation,
-                    );
-                  });
-            },
-          ),
-          _loading
-              ? const Center(child: CircularProgressIndicator())
-              : ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: _incomingReservationsList.length,
-            itemBuilder: (context, index) {
-              final reservation = _incomingReservationsList[index];
-              return FutureBuilder(
-                  future: ParkingService.getParkingById(
-                      reservation.parkingId),
-                  builder: (context, snapshot) {
-                    if (snapshot.data == null) {
-                      return const SizedBox();
-                    }
-                    return ReservationCard(
-                      id: reservation.id,
-                      status: reservation.status,
-                      address: snapshot.data!.location.address,
-                      number: snapshot.data!.location.numDirection,
-                      date: reservation.startTime.toDateTime(),
-                      startTime: TimeOfDay.fromDateTime(
-                          reservation.startTime.toDateTime()),
-                      endTime: TimeOfDay.fromDateTime(
-                          reservation.endTime.toDateTime()),
-                      onTapReservation: onTapReservation,
-                      hasAction: true,
-                      actions: [
-                        Expanded(
-                          child: OutlinedButton(
-                            style: OutlinedButton.styleFrom(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(6),
+                    return FutureBuilder(
+                      future: ParkingService.getParkingById(
+                        reservation.parkingId,
+                      ),
+                      builder: (context, snapshot) {
+                        if (snapshot.data == null) {
+                          return const SizedBox();
+                        }
+                        return ReservationCard(
+                          id: reservation.id,
+                          status: reservation.status,
+                          address: snapshot.data!.location.address,
+                          number: snapshot.data!.location.numDirection,
+                          hasAction: true,
+                          actions: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () async {
+                                  await ReservationService.cancelReservation(
+                                    reservation.id,
+                                  );
+                                  _loadHostReservations();
+                                },
+                                style: OutlinedButton.styleFrom(
+                                  side: BorderSide(
+                                    color: theme.colorScheme.error,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                child: Text(
+                                  "Rechazar",
+                                  style: TextStyle(
+                                    color: theme.colorScheme.error,
+                                  ),
+                                ),
                               ),
                             ),
-                            onPressed: () async {
-                              await ReservationService
-                                  .startServiceReservation(
-                                  reservation.id);
-                              _loadHostReservations();
-                            },
-                            child: const Text("Empezar servicio"),
-                          ),
-                        ),
-                      ],
-                    );
-                  });
-            },
-          ),
-          _loading
-              ? const Center(child: CircularProgressIndicator())
-              : ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: _inProgressReservationList.length,
-            itemBuilder: (context, index) {
-              final reservation = _inProgressReservationList[index];
-
-              return FutureBuilder(
-                  future: ParkingService.getParkingById(
-                      reservation.parkingId),
-                  builder: (context, snapshot) {
-                    if (snapshot.data == null) {
-                      return const SizedBox();
-                    }
-                    return ReservationCard(
-                      id: reservation.id,
-                      status: reservation.status,
-                      address: snapshot.data!.location.address,
-                      number: snapshot.data!.location.numDirection,
-                      date: reservation.startTime.toDateTime(),
-                      startTime: TimeOfDay.fromDateTime(
-                          reservation.startTime.toDateTime()),
-                      endTime: TimeOfDay.fromDateTime(
-                          reservation.endTime.toDateTime()),
-                      onTapReservation: onTapReservation,
-                      hasAction: true,
-                      actions: [
-                        Expanded(
-                          child: OutlinedButton(
-                            style: OutlinedButton.styleFrom(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(6),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: FilledButton(
+                                onPressed: () async {
+                                  await ReservationService.approveReservation(
+                                    reservation.id,
+                                  );
+                                  _loadHostReservations();
+                                },
+                                style: FilledButton.styleFrom(
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                child: const Text("Aceptar"),
                               ),
                             ),
-                            onPressed: () async {
-                              await ReservationService
-                                  .completeReservation(reservation.id);
-                              _loadHostReservations();
-                            },
-                            child: const Text("Finalizar servicio"),
+                          ],
+                          date: reservation.startTime.toDateTime(),
+                          startTime: TimeOfDay.fromDateTime(
+                            reservation.startTime.toDateTime(),
                           ),
-                        ),
-                      ],
+                          endTime: TimeOfDay.fromDateTime(
+                            reservation.endTime.toDateTime(),
+                          ),
+                          onTapReservation: onTapReservation,
+                        );
+                      },
                     );
-                  });
-            },
-          ),
-          _loading
-              ? const Center(child: CircularProgressIndicator())
-              : ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: _pastReservationsList.length,
-            itemBuilder: (context, index) {
-              final reservation = _pastReservationsList[index];
-              return FutureBuilder(
-                  future: ParkingService.getParkingById(
-                      reservation.parkingId),
-                  builder: (context, snapshot) {
-                    if (snapshot.data == null) {
-                      return const SizedBox();
-                    }
-                    return ReservationCard(
-                      id: reservation.id,
-                      status: reservation.status,
-                      address: snapshot.data!.location.address,
-                      number: snapshot.data!.location.numDirection,
-                      date: reservation.startTime.toDateTime(),
-                      startTime: TimeOfDay.fromDateTime(
-                          reservation.startTime.toDateTime()),
-                      endTime: TimeOfDay.fromDateTime(
-                          reservation.endTime.toDateTime()),
-                      onTapReservation: onTapReservation,
+                  },
+                ),
+            _loading
+                ? const Center(child: CircularProgressIndicator())
+                : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _incomingReservationsList.length,
+                  itemBuilder: (context, index) {
+                    final reservation = _incomingReservationsList[index];
+                    return FutureBuilder(
+                      future: ParkingService.getParkingById(
+                        reservation.parkingId,
+                      ),
+                      builder: (context, snapshot) {
+                        if (snapshot.data == null) {
+                          return const SizedBox();
+                        }
+                        return ReservationCard(
+                          id: reservation.id,
+                          status: reservation.status,
+                          address: snapshot.data!.location.address,
+                          number: snapshot.data!.location.numDirection,
+                          date: reservation.startTime.toDateTime(),
+                          startTime: TimeOfDay.fromDateTime(
+                            reservation.startTime.toDateTime(),
+                          ),
+                          endTime: TimeOfDay.fromDateTime(
+                            reservation.endTime.toDateTime(),
+                          ),
+                          onTapReservation: onTapReservation,
+                          hasAction: true,
+                          actions: [
+                            Expanded(
+                              child: OutlinedButton(
+                                style: OutlinedButton.styleFrom(
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                ),
+                                onPressed: () async {
+                                  await ReservationService.startServiceReservation(
+                                    reservation.id,
+                                  );
+                                  _loadHostReservations();
+                                },
+                                child: const Text("Empezar servicio"),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
                     );
-                  });
-            },
-          ),
-        ]),
+                  },
+                ),
+            _loading
+                ? const Center(child: CircularProgressIndicator())
+                : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _inProgressReservationList.length,
+                  itemBuilder: (context, index) {
+                    final reservation = _inProgressReservationList[index];
+
+                    return FutureBuilder(
+                      future: ParkingService.getParkingById(
+                        reservation.parkingId,
+                      ),
+                      builder: (context, snapshot) {
+                        if (snapshot.data == null) {
+                          return const SizedBox();
+                        }
+                        return ReservationCard(
+                          id: reservation.id,
+                          status: reservation.status,
+                          address: snapshot.data!.location.address,
+                          number: snapshot.data!.location.numDirection,
+                          date: reservation.startTime.toDateTime(),
+                          startTime: TimeOfDay.fromDateTime(
+                            reservation.startTime.toDateTime(),
+                          ),
+                          endTime: TimeOfDay.fromDateTime(
+                            reservation.endTime.toDateTime(),
+                          ),
+                          onTapReservation: onTapReservation,
+                          hasAction: true,
+                          actions: [
+                            Expanded(
+                              child: OutlinedButton(
+                                style: OutlinedButton.styleFrom(
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                ),
+                                onPressed: () async {
+                                  await ReservationService.completeReservation(
+                                    reservation.id,
+                                  );
+                                  _loadHostReservations();
+                                },
+                                child: const Text("Finalizar servicio"),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  },
+                ),
+            _loading
+                ? const Center(child: CircularProgressIndicator())
+                : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _pastReservationsList.length,
+                  itemBuilder: (context, index) {
+                    final reservation = _pastReservationsList[index];
+                    return FutureBuilder(
+                      future: ParkingService.getParkingById(
+                        reservation.parkingId,
+                      ),
+                      builder: (context, snapshot) {
+                        if (snapshot.data == null) {
+                          return const SizedBox();
+                        }
+                        return ReservationCard(
+                          id: reservation.id,
+                          status: reservation.status,
+                          address: snapshot.data!.location.address,
+                          number: snapshot.data!.location.numDirection,
+                          date: reservation.startTime.toDateTime(),
+                          startTime: TimeOfDay.fromDateTime(
+                            reservation.startTime.toDateTime(),
+                          ),
+                          endTime: TimeOfDay.fromDateTime(
+                            reservation.endTime.toDateTime(),
+                          ),
+                          onTapReservation: onTapReservation,
+                        );
+                      },
+                    );
+                  },
+                ),
+          ],
+        ),
       ),
     );
   }

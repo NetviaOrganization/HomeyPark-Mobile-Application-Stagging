@@ -9,6 +9,7 @@ import 'package:homeypark_mobile_application/screens/sign_in_screen.dart';
 import 'package:homeypark_mobile_application/services/iam_service.dart';
 import 'package:homeypark_mobile_application/services/profile_service.dart';
 import 'package:homeypark_mobile_application/services/vehicle_service.dart';
+import 'package:homeypark_mobile_application/services/email_verification_service.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
@@ -25,6 +26,7 @@ Future<void> main() async {
 
   final profileService = ProfileService(iamService);
   final vehicleService = VehicleService(iamService); 
+  final emailVerificationService = EmailVerificationService();
 
     final GoogleMapsFlutterPlatform mapsImplementation = GoogleMapsFlutterPlatform.instance;
   if (mapsImplementation is GoogleMapsFlutterAndroid) {
@@ -38,6 +40,7 @@ Future<void> main() async {
         ChangeNotifierProvider.value(value: iamService),
         ChangeNotifierProvider.value(value: profileService),
         ChangeNotifierProvider.value(value: vehicleService),
+        ChangeNotifierProvider.value(value: emailVerificationService),
       ],
       child: const MyApp(),
     ),

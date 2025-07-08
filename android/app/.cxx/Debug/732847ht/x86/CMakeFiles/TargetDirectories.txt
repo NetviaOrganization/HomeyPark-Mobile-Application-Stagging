@@ -1,0 +1,2 @@
+D:/UPC/HomeyPark-Mobile-Application-Stagging/android/app/.cxx/Debug/732847ht/x86/CMakeFiles/edit_cache.dir
+D:/UPC/HomeyPark-Mobile-Application-Stagging/android/app/.cxx/Debug/732847ht/x86/CMakeFiles/rebuild_cache.dir
