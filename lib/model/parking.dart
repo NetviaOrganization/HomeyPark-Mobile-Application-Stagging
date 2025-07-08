@@ -1,5 +1,6 @@
 import 'package:homeypark_mobile_application/model/parking_location.dart';
 import 'package:homeypark_mobile_application/model/parking_schedule.dart';
+import 'package:homeypark_mobile_application/model/user_info.dart';
 
 class Parking {
   final int id;
@@ -13,6 +14,9 @@ class Parking {
   final String description;
   final ParkingLocation location;
   final List<ParkingSchedule> schedules;
+  final UserInfo userInfo;
+  final double averageRating;
+  final int reviewCount;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -28,6 +32,9 @@ class Parking {
     required this.description,
     required this.location,
     required this.schedules,
+    required this.userInfo,
+    required this.averageRating,
+    required this.reviewCount,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -36,10 +43,10 @@ class Parking {
     return Parking(
       id: json['id'],
       profileId: json['profileId'],
-      width: json['width'],
-      length: json['length'],
-      height: json['height'],
-      price: json['price'],
+      width: (json['width'] as num).toDouble(),
+      length: (json['length'] as num).toDouble(),
+      height: (json['height'] as num).toDouble(),
+      price: (json['price'] as num).toDouble(),
       phone: json['phone'],
       space: json['space'],
       description: json['description'],
@@ -47,6 +54,9 @@ class Parking {
       schedules: (json['schedules'] as List)
           .map((schedule) => ParkingSchedule.fromJson(schedule))
           .toList(),
+      userInfo: UserInfo.fromJson(json['userInfo']),
+      averageRating: (json['averageRating'] as num?)?.toDouble() ?? 0.0,
+      reviewCount: json['reviewCount'] as int? ?? 0,
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: DateTime.parse(json['updatedAt']),
     );
@@ -65,6 +75,9 @@ class Parking {
       'description': description,
       'location': location.toJson(),
       'schedules': schedules.map((schedule) => schedule.toJson()).toList(),
+      'userInfo': userInfo.toJson(),
+      'averageRating': averageRating,
+      'reviewCount': reviewCount,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };

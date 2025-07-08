@@ -7,6 +7,8 @@ import 'package:homeypark_mobile_application/services/iam_service.dart';
 import 'package:homeypark_mobile_application/model/user_model.dart';
 import 'package:homeypark_mobile_application/screens/sign_up_screen.dart';
 import 'package:homeypark_mobile_application/widgets/auth_widget.dart';
+import 'package:homeypark_mobile_application/config/pref/preferences.dart';
+
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -97,6 +99,10 @@ class _SignInScreenState extends State<SignInScreen> {
     );
     final iamService = Provider.of<IAMService>(context, listen: false);
     await iamService.signIn(signInData);
+    if (iamService.currentUser != null) {
+      final userId = int.parse(iamService.currentUser!.id);
+      await preferences.saveUserId(userId);
+    }
   }
 
   void _onRecaptchaError(String? error) {
