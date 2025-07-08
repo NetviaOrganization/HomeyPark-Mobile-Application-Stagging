@@ -11,6 +11,7 @@ import 'package:homeypark_mobile_application/services/parking_service.dart';
 import 'package:homeypark_mobile_application/utils/user_location.dart';
 import 'package:homeypark_mobile_application/widgets/navigation_menu.dart';
 import 'package:homeypark_mobile_application/widgets/nearby_parking_sheet.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 
 const DEFAULT_CENTER = LatLng(DEFAULT_POSITION_MAP_LAT, DEFAULT_POSITION_MAP_LNG);
@@ -69,19 +70,19 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final results = await Future.wait([
         getUserLocation(),
-        ParkingService.getParkingsLocations(),
+         ParkingService.getParkings(), 
       ]);
 
       
       
-      final position = results[0] as ({double latitude, double longitude});
-      final parkings = results[1] as List<ParkingLocation>;
+      final position = results[0] as Position;
+      final parkings = results[1] as List<Parking>;
      final userPos = LatLng(position.latitude, position.longitude);
 
       if (mounted) {
         setState(() {
           _cameraCenter = userPos;
-          _markers = _buildMarkersFromLocations(parkings);
+          _markers = _buildMarkersFromParkings(parkings);
           _isMapLoading = false; // Datos listos, ocultar spinner
         });
         
@@ -92,11 +93,11 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (e) {
       debugPrint("Error inicializando el mapa: $e. Cargando datos por defecto.");
       try {
-        final parkings = await ParkingService.getParkingsLocations();
+       final parkings = await ParkingService.getParkings();
         if (mounted) {
           setState(() {
             _cameraCenter = DEFAULT_CENTER;
-            _markers = _buildMarkersFromLocations(parkings);
+            _markers = _buildMarkersFromParkings(parkings);
             _isMapLoading = false;
           });
         }
@@ -107,6 +108,24 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
     }
+  }
+
+ Set<Marker> _buildMarkersFromParkings(List<Parking> parkings) {
+    return parkings
+        .where((p) => p.location != null) // Filtra parkings sin ubicación
+        .map((parking) {
+          final location = parking.location!;
+          return Marker(
+            markerId: MarkerId('parking_${parking.id}'),
+            position: LatLng(location.latitude, location.longitude),
+            infoWindow: InfoWindow(
+              title: parking.description,
+              snippet: 'Toca para ver detalles',
+            ),
+            onTap: () => _navigateToParkingDetail(parking.id),
+          );
+        })
+        .toSet();
   }
 
 Set<Marker> _buildMarkersFromLocations(List<ParkingLocation> locations) {

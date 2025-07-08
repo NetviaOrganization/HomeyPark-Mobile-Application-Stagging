@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:homeypark_mobile_application/screens/home_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_easy_recaptcha_v2/flutter_easy_recaptcha_v2.dart';
 
@@ -90,14 +91,35 @@ class _SignInScreenState extends State<SignInScreen> {
   }
 
   Future<void> _signInWithToken(String token) async {
-    final signInData = SignInData(
-      email: _emailController.text.trim(),
-      password: _passwordController.text,
-      recaptchaToken: token, // Pasamos el token, aunque el servicio ya no lo use para verificar.
+  // 1. Preparamos los datos para el inicio de sesión.
+  final signInData = SignInData(
+    email: _emailController.text.trim(),
+    password: _passwordController.text,
+    recaptchaToken: token,
+  );
+
+  // 2. Obtenemos la instancia del servicio (sin escuchar cambios).
+  final iamService = Provider.of<IAMService>(context, listen: false);
+
+  // 3. Llamamos al método signIn y guardamos el resultado (true/false).
+  final bool success = await iamService.signIn(signInData);
+
+  // 4. Verificamos el resultado.
+  //    El `mounted` es una comprobación de seguridad para evitar errores si el widget
+  //    ha sido eliminado del árbol mientras la operación de red estaba en curso.
+  if (success && mounted) {
+    // Si el inicio de sesión fue exitoso, navegamos a HomeScreen
+    // y eliminamos todas las rutas anteriores de la pila de navegación.
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => const HomeScreen()),
+      (Route<dynamic> route) => false,
     );
-    final iamService = Provider.of<IAMService>(context, listen: false);
-    await iamService.signIn(signInData);
   }
+  
+  // 5. Si `success` es falso, no hacemos nada aquí.
+  //    Tu IAMService ya guardó el mensaje de error, y el widget
+  //    `ErrorMessageWidget` que seguramente tienes en tu `build` se encargará de mostrarlo.
+}
 
   void _onRecaptchaError(String? error) {
     debugPrint('reCAPTCHA Error: $error');

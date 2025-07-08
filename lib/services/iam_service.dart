@@ -93,13 +93,6 @@ class IAMService extends ChangeNotifier {
       throw json.decode(response.body)['message'] ?? 'Error al registrar el usuario.';
     }
 
-    // 3. Si el registro tiene éxito, iniciamos sesión para obtener el token y el perfil.
-    final signInResponse = await http.post(
-      Uri.parse('$_baseUrl/authentication/sign-in'),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({'email': data.email, 'password': data.password}),
-    );
-    await _handleAuthResponse(signInResponse, email: data.email);
   });
 
    Future<bool> signIn(SignInData data) => _performAuthOperation(() async {
@@ -180,9 +173,10 @@ Future<void> _handleAuthResponse(http.Response response, {required String email}
       if (response.body.isNotEmpty) {
         final responseData = json.decode(response.body);
         final token = responseData['token'] as String?;
+        final userId = responseData['id'] as int?;
 
-        if (token == null) {
-          throw 'La respuesta del servidor no incluyó un token de sesión.';
+        if (token == null || userId == null) {
+          throw 'La respuesta del servidor no incluyó un token o un ID de usuario.';
         }
 
         // 1. Guardamos el token de sesión de forma segura.
@@ -190,12 +184,16 @@ Future<void> _handleAuthResponse(http.Response response, {required String email}
         await _secureStorage.write(key: _sessionEmailKey, value: email);
 
         final authData = {
-        'id': responseData['id'],
+        'id': userId,
         'email': email,
         'roles': responseData['roles'] ?? ['ROLE_GUEST'],
         };
 
-      await _fetchUserProfile(token: token, authData: authData);
+      await _fetchUserProfile(token: token, authData: authData, userId: userId);
+
+        // 2. Actualizamos el usuario actual con el token y los datos del perfil.
+        //    El método _fetchUserProfile se encargará de crear el UserModel completo.
+        //    No necesitamos hacer nada más aquí, ya que notifyListeners() se llama dentro de _fetchUserProfile.
 
       } else {
         throw 'Respuesta exitosa del servidor, pero con cuerpo vacío.';
@@ -213,13 +211,14 @@ Future<void> _handleAuthResponse(http.Response response, {required String email}
 
   Future<void> _fetchUserProfile({
     required String token, 
-    required Map<String, dynamic> authData, // Ahora recibe los datos de auth
+    required Map<String, dynamic> authData,
+    required int userId,
   }) async {
     try {
       // 1. Hacemos la llamada al endpoint GET /profiles general.
       //    El backend sabe a qué usuario nos referimos gracias al token.
       final response = await http.get(
-        Uri.parse('$_baseUrl/profiles'), 
+        Uri.parse('$_baseUrl/profiles/$userId'), 
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -231,28 +230,21 @@ Future<void> _handleAuthResponse(http.Response response, {required String email}
       }
 
       if (response.statusCode == 200) {
-        // 2. El backend devuelve una LISTA de perfiles.
-        final List<dynamic> profilesList = json.decode(response.body);
+        // 2. Ahora el backend devuelve UN SOLO objeto de perfil, no una lista.
+        final Map<String, dynamic> profileData = json.decode(response.body);
 
-        if (profilesList.isEmpty) {
-          throw 'Error crítico: El token es válido pero no se encontró ningún perfil asociado.';
-        }
-
-        // 3. Tomamos el PRIMER (y probablemente único) perfil de la lista.
-        final Map<String, dynamic> profileData = profilesList.first;
-        
-        // 4. Creamos el UserModel completo usando nuestro factory modificado.
+        // 3. Creamos el UserModel completo.
         final user = UserModel.fromJson(authData: authData, profileData: profileData);
         _setCurrentUser(user);
         
+      } else if (response.statusCode == 404) {
+          throw 'Error crítico: El usuario existe pero no se encontró un perfil asociado.';
       } else {
         throw 'No se pudo obtener el perfil (código de respuesta: ${response.statusCode}).';
       }
     } catch (e) {
-      // Si cualquier parte de este proceso falla, cerramos la sesión para
-      // evitar que la app quede en un estado inconsistente.
+      // Si cualquier parte de este proceso falla, cerramos la sesión.
       await signOut();
-      // Relanzamos el error para que _performAuthOperation lo capture y lo muestre.
       rethrow;
     }
   }

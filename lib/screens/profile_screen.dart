@@ -27,21 +27,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ProfileService>().clearErrorMessage();
-    });
-     final currentUser = context.read<IAMService>().currentUser;
-    _firstNameController = TextEditingController(text: currentUser?.profile.firstName ?? '');
-    _lastNameController = TextEditingController(text: currentUser?.profile.lastName ?? '');
-    _selectedBirthDate = currentUser?.profile.birthDate;
-    if (currentUser?.profile.birthDate != null) {
-      _birthDateController = TextEditingController(
-          text: DateFormat('d \'de\' MMMM \'de\' yyyy', 'es_ES').format(currentUser!.profile.birthDate));
-    } else {
-      _birthDateController = TextEditingController();
-    }
-  
-  
+    // --> OBTENEMOS EL USUARIO UNA SOLA VEZ para inicializar los controladores.
+    // Usamos `context.read` porque no necesitamos escuchar cambios aquí.
+    final currentUser = context.read<IAMService>().currentUser;
+    final profile = currentUser?.profile;
+
+    _firstNameController = TextEditingController(text: profile?.firstName ?? '');
+    _lastNameController = TextEditingController(text: profile?.lastName ?? '');
+    _selectedBirthDate = profile?.birthDate;
+    _birthDateController = TextEditingController(
+      text: profile?.birthDate != null
+          ? DateFormat('d \'de\' MMMM \'de\' yyyy', 'es_ES').format(profile!.birthDate)
+          : '',
+    );
   }
 
   @override
@@ -52,16 +50,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.dispose();
   }
 
-  void _toggleEditMode() {
+   void _toggleEditMode() {
     setState(() {
       _isEditing = !_isEditing;
+      // Si se cancela la edición, restauramos los valores originales.
       if (!_isEditing) {
-        final currentUser = context.read<IAMService>().currentUser;
-        _firstNameController.text = currentUser?.firstName ?? '';
-        _lastNameController.text = currentUser?.lastName ?? '';
-        _selectedBirthDate = currentUser?.profile.birthDate;
-        _birthDateController.text = currentUser?.profile.birthDate != null
-            ? DateFormat('d \'de\' MMMM \'de\' yyyy', 'es_ES').format(currentUser!.profile.birthDate)
+        final profile = context.read<IAMService>().currentUser?.profile;
+        _firstNameController.text = profile?.firstName ?? '';
+        _lastNameController.text = profile?.lastName ?? '';
+        _selectedBirthDate = profile?.birthDate;
+        _birthDateController.text = profile?.birthDate != null
+            ? DateFormat('d \'de\' MMMM \'de\' yyyy', 'es_ES').format(profile!.birthDate)
             : '';
         context.read<ProfileService>().clearErrorMessage();
       }
@@ -88,29 +87,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     FocusScope.of(context).unfocus();
 
-    final currentUser = context.read<IAMService>().currentUser;
-    if (currentUser?.id == null) {
+    // --> CORRECCIÓN CRÍTICA: Obtenemos el profile.id del usuario actual.
+    final profileId = context.read<IAMService>().currentUser?.profile.id;
+    if (profileId == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Error: ID de usuario no encontrado.')));
+            const SnackBar(content: Text('Error: No se pudo encontrar el ID del perfil.')));
       }
       return;
     }
 
     final profileService = context.read<ProfileService>();
-     final success = await profileService.updateProfile(
-      currentUser!.profileId, // Añadimos 'profileId:'
+    final success = await profileService.updateProfile(
+      profileId, // Pasamos el ID del perfil, no del usuario.
       firstName: _firstNameController.text.trim(),
       lastName: _lastNameController.text.trim(),
       birthDate: _selectedBirthDate,
     );
 
     if (mounted && success) {
-      setState(() => _isEditing = false);
+      setState(() => _isEditing = false); // Salimos del modo edición.
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Perfil actualizado con éxito.'),
-            backgroundColor: AppColors.primaryGreen),
+        SnackBar(
+            content: const Text('Perfil actualizado con éxito.'),
+            backgroundColor: Colors.green, // O tu AppColor
+        ),
       );
     }
   }
@@ -118,10 +119,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final currentUser = context.watch<IAMService>().currentUser;
-    if (currentUser == null) {
+      if (currentUser == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Perfil')),
-        body: const Center(child: Text('No se ha podido cargar el perfil del usuario.')),
+        body: const Center(child: Text('Cargando perfil...')),
       );
     }
 

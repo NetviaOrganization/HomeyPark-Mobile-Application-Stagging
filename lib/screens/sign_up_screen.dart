@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:homeypark_mobile_application/screens/sign_in_screen.dart';
 import 'package:provider/provider.dart';
 
 import 'package:flutter_easy_recaptcha_v2/flutter_easy_recaptcha_v2.dart';
@@ -115,30 +116,49 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
   }
 
-  Future<void> _signUpWithToken(String token) async {
-    final signUpData = SignUpData(
-      firstName: _firstNameController.text.trim(),
-      lastName: _lastNameController.text.trim(),
-      birthDate: _selectedBirthDate!, // El validador asegura que no es nulo
-      email: _emailController.text.trim(),
-      password: _passwordController.text,
-      confirmPassword: _confirmPasswordController.text,
-      recaptchaToken: token,
-    );
+Future<void> _signUpWithToken(String token) async {
+  final signUpData = SignUpData(
+    firstName: _firstNameController.text.trim(),
+    lastName: _lastNameController.text.trim(),
+    birthDate: _selectedBirthDate!,
+    email: _emailController.text.trim(),
+    password: _passwordController.text,
+    confirmPassword: _confirmPasswordController.text,
+    recaptchaToken: token,
+  );
 
-    final iamService = Provider.of<IAMService>(context, listen: false);
+  final iamService = Provider.of<IAMService>(context, listen: false);
+
+  try {
     final success = await iamService.signUp(signUpData);
 
     if (success && mounted) {
+      // 1. Muestra el mensaje de éxito.
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('¡Cuenta creada exitosamente! Por favor, inicia sesión.'),
-          backgroundColor: AppColors.primaryGreen,
+          backgroundColor: Colors.green, // O tu color de éxito
         ),
       );
-      Navigator.of(context).pop();
+
+      // 2. NAVEGACIÓN RECOMENDADA:
+      // Redirige a la pantalla de login y elimina todas las rutas anteriores.
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const SignInScreen()),
+        (Route<dynamic> route) => false, // Este predicado elimina todas las rutas anteriores
+      );
+    }
+  } catch (e) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Ocurrió un error inesperado: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
+}
 
   void _onRecaptchaError(String? error) {
     debugPrint('reCAPTCHA Error: $error');
