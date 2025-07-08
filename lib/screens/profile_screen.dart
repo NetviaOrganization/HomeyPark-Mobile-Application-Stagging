@@ -7,6 +7,7 @@ import 'package:homeypark_mobile_application/widgets/profile_avatar.dart';
 import 'package:homeypark_mobile_application/widgets/profile_info_field.dart';
 import 'package:homeypark_mobile_application/widgets/auth_widget.dart';
 import 'package:homeypark_mobile_application/model/user_model.dart';
+import '../providers/rewards_provider.dart'; // NUEVO
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -29,8 +30,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ProfileService>().clearErrorMessage();
+      // NUEVO: Cargar progreso de recompensas
+      _loadRewardsData();
     });
-     final currentUser = context.read<IAMService>().currentUser;
+    final currentUser = context.read<IAMService>().currentUser;
     _firstNameController = TextEditingController(text: currentUser?.profile.firstName ?? '');
     _lastNameController = TextEditingController(text: currentUser?.profile.lastName ?? '');
     _selectedBirthDate = currentUser?.profile.birthDate;
@@ -40,8 +43,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } else {
       _birthDateController = TextEditingController();
     }
-  
-  
+  }
+
+  // NUEVO: Cargar datos de recompensas
+  void _loadRewardsData() async {
+    final currentUser = context.read<IAMService>().currentUser;
+    if (currentUser?.id != null) {
+      final rewardsProvider = context.read<RewardsProvider>();
+      await rewardsProvider.loadRewardsProgress(currentUser!.id as int);
+      await rewardsProvider.loadAvailableRewards(currentUser.id as int);
+    }
   }
 
   @override
@@ -98,8 +109,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     final profileService = context.read<ProfileService>();
-     final success = await profileService.updateProfile(
-      currentUser!.profileId, // Añadimos 'profileId:'
+    final success = await profileService.updateProfile(
+      currentUser!.profileId,
       firstName: _firstNameController.text.trim(),
       lastName: _lastNameController.text.trim(),
       birthDate: _selectedBirthDate,
@@ -154,9 +165,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               radius: 60,
               onEdit: _isEditing
                   ? () {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                          content: Text('Función para cambiar foto no implementada.')));
-                    }
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text('Función para cambiar foto no implementada.')));
+              }
                   : null,
             ),
             const SizedBox(height: 24),
@@ -164,6 +175,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ? _buildEditForm()
                 : _buildProfileInfo(currentUser),
             const SizedBox(height: 32),
+
+            // NUEVO: Sección de recompensas TB10
+            if (!_isEditing) _buildRewardsSection(),
+
             if (_isEditing)
               Consumer<ProfileService>(
                 builder: (context, profileService, child) {
@@ -208,7 +223,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-   Widget _buildEditForm() {
+  Widget _buildEditForm() {
     return Form(
       key: _formKey,
       child: Column(
@@ -250,6 +265,167 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  // NUEVO: Sección de recompensas TB10
+  Widget _buildRewardsSection() {
+    return Consumer<RewardsProvider>(
+      builder: (context, rewardsProvider, child) {
+        if (rewardsProvider.isLoadingProgress) {
+          return const Card(
+            child: Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          );
+        }
+
+        final progress = rewardsProvider.rewardsProgress;
+        if (progress == null) {
+          return const SizedBox.shrink();
+        }
+
+        return Card(
+          margin: const EdgeInsets.only(bottom: 16),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.card_giftcard, color: Theme.of(context).primaryColor),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Programa de Recompensas',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Progreso hacia recompensa
+                Text(
+                  'Progreso hacia tu próxima recompensa',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 8),
+
+                LinearProgressIndicator(
+                  value: progress.progressPercentage / 100,
+                  backgroundColor: Colors.grey[300],
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    Theme.of(context).primaryColor,
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                Text(
+                  '${progress.completedReservations} de ${progress.reservationsRequired} reservas completadas',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+
+                const SizedBox(height: 16),
+
+                // Estado de elegibilidad
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: progress.isEligibleForReward
+                        ? Colors.green.withOpacity(0.1)
+                        : Colors.orange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: progress.isEligibleForReward
+                          ? Colors.green
+                          : Colors.orange,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        progress.isEligibleForReward
+                            ? Icons.check_circle
+                            : Icons.hourglass_empty,
+                        color: progress.isEligibleForReward
+                            ? Colors.green
+                            : Colors.orange,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          progress.isEligibleForReward
+                              ? '¡Felicidades! Tienes recompensas disponibles'
+                              : 'Sigue reservando para obtener recompensas',
+                          style: TextStyle(
+                            color: progress.isEligibleForReward
+                                ? Colors.green[700]
+                                : Colors.orange[700],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Mostrar cupones activos si los hay
+                if (rewardsProvider.hasActiveCoupons()) ...[
+                  const SizedBox(height: 16),
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Cupones Activos',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ...rewardsProvider.getActiveCoupons().map((coupon) =>
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).primaryColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.local_offer,
+                                color: Theme.of(context).primaryColor),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '${coupon.discountPercentage.toInt()}% de descuento',
+                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                  Text(
+                                    'Código: ${coupon.couponCode}',
+                                    style: Theme.of(context).textTheme.bodySmall,
+                                  ),
+                                  Text(
+                                    'Vence: ${DateFormat('dd/MM/yyyy').format(coupon.expirationDate)}',
+                                    style: Theme.of(context).textTheme.bodySmall,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ).toList(),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
