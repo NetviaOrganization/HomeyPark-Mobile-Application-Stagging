@@ -12,6 +12,7 @@ import 'package:homeypark_mobile_application/services/vehicle_service.dart';
 import 'package:homeypark_mobile_application/services/email_verification_service.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:homeypark_mobile_application/providers/rewards_provider.dart'; //
 
 Future<void> main() async {
   
@@ -41,6 +42,7 @@ Future<void> main() async {
         ChangeNotifierProvider.value(value: profileService),
         ChangeNotifierProvider.value(value: vehicleService),
         ChangeNotifierProvider.value(value: emailVerificationService),
+        ChangeNotifierProvider(create: (_) => RewardsProvider()), // ✓ Already correct
       ],
       child: const MyApp(),
     ),
